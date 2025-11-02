@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cisco Configuration Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-router" viewBox="0 0 16 16">
+                    <path d="M5.525 3.025a3.5 3.5 0 0 1 4.95 0 .5.5 0 1 0 .707-.707 4.5 4.5 0 0 0-6.364 0 .5.5 0 0 0 .707.707"/>
+                    <path d="M6.94 4.44a1.5 1.5 0 0 1 2.12 0 .5.5 0 0 0 .708-.708 2.5 2.5 0 0 0-3.536 0 .5.5 0 0 0 .707.707ZM2.5 11a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m4.5-.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0m2.5.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m1.5-.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0m2 0a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0"/>
+                    <path d="M2 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-3V3zm-4 0v9H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+                </svg>
+                Cisco Configuration Generator
+            </span>
+            <div class="d-flex">
+                <button class="btn btn-outline-light me-2" id="loginBtn">Login</button>
+                <button class="btn btn-outline-light" id="historyBtn">History</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-info" role="alert">
+                    <strong>Offline Mode:</strong> This application operates entirely offline with no external dependencies.
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Configuration Generator</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="configForm">
+                            <!-- Platform Selection -->
+                            <div class="mb-3">
+                                <label for="platform" class="form-label">Platform *</label>
+                                <select class="form-select" id="platform" name="platform" required>
+                                    {% for p in platforms %}
+                                    <option value="{{ p }}">{{ p.upper() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Hostname -->
+                            <div class="mb-3">
+                                <label for="hostname" class="form-label">Hostname *</label>
+                                <input type="text" class="form-control" id="hostname" name="hostname"
+                                       placeholder="router01" required>
+                            </div>
+
+                            <!-- Domain Name -->
+                            <div class="mb-3">
+                                <label for="domain_name" class="form-label">Domain Name</label>
+                                <input type="text" class="form-control" id="domain_name" name="domain_name"
+                                       placeholder="example.com">
+                            </div>
+
+                            <!-- Enable Secret -->
+                            <div class="mb-3">
+                                <label for="enable_secret" class="form-label">Enable Secret</label>
+                                <input type="password" class="form-control" id="enable_secret" name="enable_secret">
+                            </div>
+
+                            <!-- Output Format -->
+                            <div class="mb-3">
+                                <label for="output_format" class="form-label">Output Format</label>
+                                <select class="form-select" id="output_format" name="output_format">
+                                    {% for fmt in formats %}
+                                    <option value="{{ fmt }}">{{ fmt.upper() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Advanced Options -->
+                            <div class="accordion mb-3" id="advancedAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#interfacesCollapse">
+                                            Interfaces
+                                        </button>
+                                    </h2>
+                                    <div id="interfacesCollapse" class="accordion-collapse collapse"
+                                         data-bs-parent="#advancedAccordion">
+                                        <div class="accordion-body">
+                                            <div id="interfaceList"></div>
+                                            <button type="button" class="btn btn-sm btn-secondary"
+                                                    onclick="addInterface()">
+                                                Add Interface
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#vlansCollapse">
+                                            VLANs
+                                        </button>
+                                    </h2>
+                                    <div id="vlansCollapse" class="accordion-collapse collapse"
+                                         data-bs-parent="#advancedAccordion">
+                                        <div class="accordion-body">
+                                            <textarea class="form-control" id="vlansJson" rows="4"
+                                                      placeholder='[{"id": 10, "name": "DATA"}, {"id": 20, "name": "VOICE"}]'></textarea>
+                                            <small class="text-muted">Enter VLANs as JSON array</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#routingCollapse">
+                                            Routing
+                                        </button>
+                                    </h2>
+                                    <div id="routingCollapse" class="accordion-collapse collapse"
+                                         data-bs-parent="#advancedAccordion">
+                                        <div class="accordion-body">
+                                            <label class="form-label">Static Routes (JSON)</label>
+                                            <textarea class="form-control mb-2" id="staticRoutesJson" rows="3"
+                                                      placeholder='[{"network": "0.0.0.0/0", "next_hop": "192.168.1.254"}]'></textarea>
+
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="ospfEnabled">
+                                                <label class="form-check-label" for="ospfEnabled">
+                                                    Enable OSPF
+                                                </label>
+                                            </div>
+                                            <div id="ospfConfig" style="display: none;">
+                                                <input type="number" class="form-control mb-2" id="ospfProcessId"
+                                                       placeholder="Process ID (e.g., 1)">
+                                                <input type="text" class="form-control" id="ospfRouterId"
+                                                       placeholder="Router ID (e.g., 1.1.1.1)">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#servicesCollapse">
+                                            Services
+                                        </button>
+                                    </h2>
+                                    <div id="servicesCollapse" class="accordion-collapse collapse"
+                                         data-bs-parent="#advancedAccordion">
+                                        <div class="accordion-body">
+                                            <label class="form-label">NTP Servers</label>
+                                            <input type="text" class="form-control mb-2" id="ntpServers"
+                                                   placeholder="pool.ntp.org, time.google.com">
+
+                                            <label class="form-label">DNS Servers</label>
+                                            <input type="text" class="form-control mb-2" id="dnsServers"
+                                                   placeholder="8.8.8.8, 8.8.4.4">
+
+                                            <label class="form-label">Syslog Servers</label>
+                                            <input type="text" class="form-control" id="syslogServers"
+                                                   placeholder="192.168.1.100">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">Generate Configuration</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="loadExample()">
+                                    Load Example
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Generated Configuration</h5>
+                        <button class="btn btn-sm btn-light" id="downloadBtn" style="display: none;">
+                            Download
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="loadingSpinner" style="display: none;" class="text-center p-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Generating...</span>
+                            </div>
+                            <p class="mt-2">Generating configuration...</p>
+                        </div>
+                        <div id="errorAlert" class="alert alert-danger" style="display: none;" role="alert"></div>
+                        <pre id="configOutput" class="bg-dark text-light p-3" style="max-height: 600px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <div id="loginError" class="alert alert-danger mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

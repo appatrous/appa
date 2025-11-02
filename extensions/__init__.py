@@ -1,0 +1,3 @@
+"""
+Flask blueprints and extensions.
+"""

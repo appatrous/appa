@@ -1,0 +1,128 @@
+/* Custom styles for Cisco Configuration Generator */
+
+:root {
+    --primary-color: #0d6efd;
+    --dark-bg: #212529;
+    --code-bg: #1e1e1e;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+#configOutput {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    background-color: var(--code-bg) !important;
+    border-radius: 4px;
+    min-height: 300px;
+}
+
+#configOutput:empty::before {
+    content: "Your generated configuration will appear here...";
+    color: #6c757d;
+    font-style: italic;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e7f1ff;
+    color: var(--primary-color);
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+pre {
+    margin-bottom: 0;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Modal improvements */
+.modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Alert improvements */
+.alert {
+    border: none;
+    border-radius: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.spinner-border {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Scrollbar styling for config output */
+#configOutput::-webkit-scrollbar {
+    width: 8px;
+}
+
+#configOutput::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+#configOutput::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+#configOutput::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
