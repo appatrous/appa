@@ -47,8 +47,10 @@ def create_app(config_name=None):
     from extensions.api import api_bp
     from extensions.history import history_bp
     from extensions.auth_routes import auth_bp
+    from extensions.ccie_api import ccie_api_bp
 
     app.register_blueprint(api_bp, url_prefix='/api/v1')
+    app.register_blueprint(ccie_api_bp, url_prefix='/api/v1')
     app.register_blueprint(history_bp, url_prefix='/history')
     app.register_blueprint(auth_bp, url_prefix='/auth')
 

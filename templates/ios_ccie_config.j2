@@ -1,0 +1,843 @@
+! ============================================
+! DEVICE: {{ hostname }}
+! PLATFORM: {{ platform | upper }}
+! DEVICE TYPE: {{ device_type | upper }}
+! Generated: {{ timestamp | default('N/A') }}
+! ============================================
+!
+! ============================================
+! GLOBAL CONFIGURATION & SECURITY BASELINE
+! ============================================
+!
+version 15.2
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+service tcp-keepalives-in
+service tcp-keepalives-out
+no service pad
+no service config
+no ip source-route
+no ip http server
+no ip http secure-server
+!
+hostname {{ hostname }}
+!
+{% if domain_name %}
+ip domain-name {{ domain_name }}
+{% endif %}
+!
+{% if enable_secret %}
+enable secret {{ enable_secret }}
+{% else %}
+! WARNING: No enable secret configured - set immediately!
+{% endif %}
+!
+! ============================================
+! AAA CONFIGURATION
+! ============================================
+!
+{% if security and security.aaa %}
+aaa new-model
+!
+{% if security.aaa.tacacs %}
+! TACACS+ Servers
+{% for server in security.aaa.tacacs %}
+tacacs-server host {{ server.host }}{% if server.key %} key {{ server.key }}{% endif %}
+
+{% endfor %}
+aaa group server tacacs+ TACACS_GROUP
+{% for server in security.aaa.tacacs %}
+ server {{ server.host }}
+{% endfor %}
+!
+{% endif %}
+!
+{% if security.aaa.radius %}
+! RADIUS Servers
+{% for server in security.aaa.radius %}
+radius-server host {{ server.host }}{% if server.key %} key {{ server.key }}{% endif %}
+
+{% endfor %}
+aaa group server radius RADIUS_GROUP
+{% for server in security.aaa.radius %}
+ server {{ server.host }}
+{% endfor %}
+!
+{% endif %}
+!
+! AAA Authentication
+aaa authentication login default group TACACS_GROUP local
+aaa authentication enable default group TACACS_GROUP enable
+aaa authentication ppp default group RADIUS_GROUP local
+!
+! AAA Authorization
+aaa authorization exec default group TACACS_GROUP local
+aaa authorization commands 1 default group TACACS_GROUP local
+aaa authorization commands 15 default group TACACS_GROUP local
+aaa authorization network default group RADIUS_GROUP local
+!
+! AAA Accounting
+aaa accounting exec default start-stop group TACACS_GROUP
+aaa accounting commands 15 default start-stop group TACACS_GROUP
+aaa accounting network default start-stop group RADIUS_GROUP
+!
+{% if security.aaa.local_users %}
+! Local Users (fallback)
+{% for username, password in security.aaa.local_users.items() %}
+username {{ username }} privilege 15 secret {{ password }}
+{% endfor %}
+{% endif %}
+!
+{% else %}
+! WARNING: AAA not configured - configure for production!
+{% endif %}
+!
+! ============================================
+! LOGGING & MONITORING
+! ============================================
+!
+logging buffered 51200 informational
+logging console critical
+logging monitor informational
+logging trap informational
+{% if services and services.syslog %}
+{% for server in services.syslog %}
+logging host {{ server }}
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! SNMP CONFIGURATION
+! ============================================
+!
+{% if services and services.snmp %}
+{% if services.snmp.version == 3 %}
+! SNMPv3 (recommended)
+{% if services.snmp.users %}
+{% for user in services.snmp.users %}
+snmp-server user {{ user }} SNMP_GROUP v3 auth sha <AUTH_KEY> priv aes 256 <PRIV_KEY>
+{% endfor %}
+{% endif %}
+snmp-server group SNMP_GROUP v3 priv
+{% else %}
+! SNMPv2c
+{% if services.snmp.community %}
+snmp-server community {{ services.snmp.community }} RO
+{% endif %}
+{% endif %}
+{% if services.snmp.location %}
+snmp-server location {{ services.snmp.location }}
+{% endif %}
+{% if services.snmp.contact %}
+snmp-server contact {{ services.snmp.contact }}
+{% endif %}
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+snmp-server enable traps cpu threshold
+snmp-server enable traps bgp
+snmp-server enable traps ospf state-change
+!
+{% endif %}
+!
+! ============================================
+! NTP CONFIGURATION
+! ============================================
+!
+{% if services and services.ntp %}
+ntp authenticate
+ntp authentication-key 1 md5 <NTP_KEY>
+ntp trusted-key 1
+{% for server in services.ntp %}
+ntp server {{ server }} key 1
+{% endfor %}
+ntp update-calendar
+!
+{% endif %}
+!
+! ============================================
+! INTERFACE CONFIGURATION
+! ============================================
+!
+{% if loopbacks %}
+! Loopback Interfaces
+{% for loopback in loopbacks %}
+interface Loopback{{ loop.index0 }}
+ description MGMT/ROUTER-ID
+ ip address {{ loopback.split('/')[0] }} {{ loopback.split('/')[1] if '/' in loopback else '255.255.255.255' }}
+ no shut
+!
+{% endfor %}
+{% endif %}
+!
+{% if interfaces %}
+! Physical Interfaces
+{% for interface in interfaces %}
+interface {{ interface.name }}
+{% if interface.description %}
+ description {{ interface.description }}
+{% endif %}
+{% if interface.ip_address and interface.subnet_mask %}
+ ip address {{ interface.ip_address }} {{ interface.subnet_mask }}
+{% elif interface.ip %}
+ ip address {{ interface.ip.split('/')[0] }} {{ interface.ip.split('/')[1] if '/' not in interface.ip else '255.255.255.0' }}
+{% endif %}
+{% if interface.vlan %}
+ switchport mode access
+ switchport access vlan {{ interface.vlan }}
+{% endif %}
+{% if interface.trunk %}
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+{% if interface.allowed_vlans %}
+ switchport trunk allowed vlan {{ interface.allowed_vlans }}
+{% endif %}
+{% endif %}
+{% if interface.speed %}
+ speed {{ interface.speed }}
+{% endif %}
+{% if interface.duplex %}
+ duplex {{ interface.duplex }}
+{% endif %}
+{% if security and security.port_security and 'access' in interface.get('mode', '') %}
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security aging time 2
+{% endif %}
+{% if interface.nat_inside %}
+ ip nat inside
+{% endif %}
+{% if interface.nat_outside %}
+ ip nat outside
+{% endif %}
+{% if interface.enabled is defined and not interface.enabled %}
+ shutdown
+{% else %}
+ no shutdown
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! VLAN CONFIGURATION
+! ============================================
+!
+{% if vlans %}
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+ name {{ vlan.name }}
+{% if vlan.description %}
+ description {{ vlan.description }}
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! SPANNING TREE CONFIGURATION
+! ============================================
+!
+{% if spanning_tree %}
+spanning-tree mode {{ spanning_tree.mode | default('rapid-pvst') }}
+{% if spanning_tree.priority %}
+spanning-tree vlan 1-4094 priority {{ spanning_tree.priority }}
+{% endif %}
+{% if spanning_tree.root %}
+spanning-tree vlan 1-4094 root primary
+{% endif %}
+spanning-tree portfast bpduguard default
+spanning-tree loopguard default
+!
+{% endif %}
+!
+! ============================================
+! ETHERCHANNEL/PORT-CHANNEL CONFIGURATION
+! ============================================
+!
+{% if etherchannel %}
+{% for po in etherchannel %}
+interface Port-channel{{ po.id }}
+ description {{ po.description | default('Port-Channel') }}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+!
+{% if po.members %}
+{% for member in po.members %}
+interface {{ member }}
+ channel-group {{ po.id }} mode {{ po.mode | default('active') }}
+!
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! ROUTING - STATIC ROUTES
+! ============================================
+!
+{% if routing and routing.static %}
+! Static Routes
+{% for route in routing.static %}
+ip route {{ route.prefix if 'prefix' in route else route.network }} {% if route.mask %}{{ route.mask }}{% endif %} {{ route.next_hop }}{% if route.distance %} {{ route.distance }}{% endif %}
+
+{% endfor %}
+!
+{% endif %}
+!
+! ============================================
+! ROUTING - OSPFv2
+! ============================================
+!
+{% if routing and routing.ospf %}
+! OSPFv2 Configuration
+router ospf {{ routing.ospf.process_id }}
+{% if routing.ospf.router_id %}
+ router-id {{ routing.ospf.router_id }}
+{% endif %}
+ auto-cost reference-bandwidth 100000
+ log-adjacency-changes detail
+{% if routing.ospf.nsf %}
+ nsf ietf
+{% endif %}
+{% if routing.ospf.bfd %}
+ bfd all-interfaces
+{% endif %}
+{% if routing.ospf.passive_interfaces %}
+{% for intf in routing.ospf.passive_interfaces %}
+ passive-interface {{ intf }}
+{% endfor %}
+{% endif %}
+{% if routing.ospf.areas %}
+{% for area in routing.ospf.areas %}
+{% if area.stub %}
+ area {{ area.id }} stub{% if area.no_summary %} no-summary{% endif %}
+
+{% elif area.nssa %}
+ area {{ area.id }} nssa{% if area.no_summary %} no-summary{% endif %}
+
+{% endif %}
+{% if area.authentication %}
+ area {{ area.id }} authentication {{ area.authentication }}
+{% endif %}
+{% if area.networks %}
+{% for network in area.networks %}
+ network {{ network.split('/')[0] }} {{ network.split('/')[1] if '/' in network else '0.0.0.255' }} area {{ area.id }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if routing.ospf.redistribute %}
+{% for protocol in routing.ospf.redistribute %}
+ redistribute {{ protocol }} subnets
+{% endfor %}
+{% endif %}
+!
+{% endif %}
+!
+! ============================================
+! ROUTING - EIGRP
+! ============================================
+!
+{% if routing and routing.eigrp %}
+! EIGRP Configuration
+{% if routing.eigrp.named_mode %}
+router eigrp {{ routing.eigrp.name | default('EIGRP') }}
+ address-family ipv4 unicast autonomous-system {{ routing.eigrp.asn }}
+{% if routing.eigrp.router_id %}
+  eigrp router-id {{ routing.eigrp.router_id }}
+{% endif %}
+{% if routing.eigrp.networks %}
+{% for network in routing.eigrp.networks %}
+  network {{ network }}
+{% endfor %}
+{% endif %}
+{% if routing.eigrp.stub %}
+  eigrp stub connected summary
+{% endif %}
+  topology base
+  exit-af-topology
+ exit-address-family
+{% else %}
+router eigrp {{ routing.eigrp.asn }}
+{% if routing.eigrp.router_id %}
+ eigrp router-id {{ routing.eigrp.router_id }}
+{% endif %}
+{% if routing.eigrp.networks %}
+{% for network in routing.eigrp.networks %}
+ network {{ network }}
+{% endfor %}
+{% endif %}
+{% if routing.eigrp.stub %}
+ eigrp stub connected summary
+{% endif %}
+ no auto-summary
+{% endif %}
+!
+{% endif %}
+!
+! ============================================
+! ROUTING - IS-IS
+! ============================================
+!
+{% if routing and routing.isis %}
+! IS-IS Configuration
+router isis {{ routing.isis.process }}
+ net {{ routing.isis.net }}
+{% if routing.isis.level %}
+ is-type {{ routing.isis.level }}
+{% endif %}
+{% if routing.isis.metric_style %}
+ metric-style {{ routing.isis.metric_style }}
+{% endif %}
+ log-adjacency-changes
+!
+{% endif %}
+!
+! ============================================
+! ROUTING - RIP
+! ============================================
+!
+{% if routing and routing.rip %}
+! RIP Configuration
+router rip
+{% if routing.rip.version %}
+ version {{ routing.rip.version }}
+{% endif %}
+{% if routing.rip.networks %}
+{% for network in routing.rip.networks %}
+ network {{ network.split('/')[0] }}
+{% endfor %}
+{% endif %}
+ no auto-summary
+!
+{% endif %}
+!
+! ============================================
+! ROUTING - BGP
+! ============================================
+!
+{% if routing and routing.bgp %}
+! BGP Configuration
+router bgp {{ routing.bgp.asn }}
+ bgp log-neighbor-changes
+{% if routing.bgp.router_id %}
+ bgp router-id {{ routing.bgp.router_id }}
+{% endif %}
+ bgp bestpath as-path multipath-relax
+ bgp bestpath med missing-as-worst
+ bgp graceful-restart
+!
+{% if routing.bgp.neighbors %}
+! BGP Neighbors
+{% for neighbor in routing.bgp.neighbors %}
+ neighbor {{ neighbor.ip }} remote-as {{ neighbor.remote_as }}
+{% if neighbor.description %}
+ neighbor {{ neighbor.ip }} description {{ neighbor.description }}
+{% endif %}
+{% if neighbor.update_source %}
+ neighbor {{ neighbor.ip }} update-source {{ neighbor.update_source }}
+{% endif %}
+{% if neighbor.ebgp_multihop %}
+ neighbor {{ neighbor.ip }} ebgp-multihop {{ neighbor.ebgp_multihop }}
+{% endif %}
+{% if neighbor.password %}
+ neighbor {{ neighbor.ip }} password {{ neighbor.password }}
+{% endif %}
+{% endfor %}
+!
+{% endif %}
+ address-family ipv4
+{% if routing.bgp.neighbors %}
+{% for neighbor in routing.bgp.neighbors %}
+  neighbor {{ neighbor.ip }} activate
+{% if neighbor.route_reflector_client %}
+  neighbor {{ neighbor.ip }} route-reflector-client
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if routing.bgp.networks %}
+{% for network in routing.bgp.networks %}
+  network {{ network.split('/')[0] }} mask {{ network.split('/')[1] if '/' in network else '255.255.255.0' }}
+{% endfor %}
+{% endif %}
+{% if routing.bgp.redistribute %}
+{% for protocol in routing.bgp.redistribute %}
+  redistribute {{ protocol }}
+{% endfor %}
+{% endif %}
+{% if routing.bgp.maximum_paths %}
+  maximum-paths {{ routing.bgp.maximum_paths }}
+{% endif %}
+ exit-address-family
+!
+{% endif %}
+!
+! ============================================
+! REDUNDANCY - HSRP
+! ============================================
+!
+{% if redundancy and redundancy.hsrp %}
+! HSRP Configuration
+{% for group in redundancy.hsrp %}
+interface {{ group.interface }}
+ standby version {{ group.version | default(2) }}
+ standby {{ group.group }} ip {{ group.vip }}
+ standby {{ group.group }} priority {{ group.priority | default(100) }}
+{% if group.preempt %}
+ standby {{ group.group }} preempt delay minimum 60
+{% endif %}
+ standby {{ group.group }} authentication md5 key-string <HSRP_KEY>
+!
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! REDUNDANCY - VRRP
+! ============================================
+!
+{% if redundancy and redundancy.vrrp %}
+! VRRP Configuration
+{% for group in redundancy.vrrp %}
+interface {{ group.interface }}
+ vrrp {{ group.group }} ip {{ group.vip }}
+ vrrp {{ group.group }} priority {{ group.priority | default(100) }}
+{% if group.preempt %}
+ vrrp {{ group.group }} preempt
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! REDUNDANCY - GLBP
+! ============================================
+!
+{% if redundancy and redundancy.glbp %}
+! GLBP Configuration
+{% for group in redundancy.glbp %}
+interface {{ group.interface }}
+ glbp {{ group.group }} ip {{ group.vip }}
+ glbp {{ group.group }} priority {{ group.priority | default(100) }}
+{% if group.load_balancing %}
+ glbp {{ group.group }} load-balancing {{ group.load_balancing }}
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! MULTICAST CONFIGURATION
+! ============================================
+!
+{% if multicast and multicast.enabled %}
+! IP Multicast Routing
+ip multicast-routing distributed
+!
+{% if multicast.pim_mode %}
+! PIM Configuration
+{% for interface in interfaces if interface.multicast_enabled | default(false) %}
+interface {{ interface.name }}
+ ip pim {{ multicast.pim_mode }}
+!
+{% endfor %}
+{% endif %}
+!
+{% if multicast.rp %}
+! Rendezvous Point (RP) Configuration
+{% if multicast.rp.type == 'static' %}
+ip pim rp-address {{ multicast.rp.address }}
+{% elif multicast.rp.type == 'auto-rp' %}
+ip pim send-rp-announce {{ multicast.rp.interface }} scope 16
+ip pim send-rp-discovery {{ multicast.rp.interface }} scope 16
+{% elif multicast.rp.type == 'bsr' %}
+ip pim bsr-candidate {{ multicast.rp.interface }}
+ip pim rp-candidate {{ multicast.rp.interface }}
+{% endif %}
+{% endif %}
+!
+{% if multicast.igmp_version %}
+! IGMP Version
+{% for interface in interfaces if interface.multicast_enabled | default(false) %}
+interface {{ interface.name }}
+ ip igmp version {{ multicast.igmp_version }}
+!
+{% endfor %}
+{% endif %}
+!
+{% endif %}
+!
+! ============================================
+! NAT CONFIGURATION
+! ============================================
+!
+{% if nat %}
+! Network Address Translation
+{% if nat.rules %}
+{% for rule in nat.rules %}
+{% if rule.action == 'overload' %}
+ip access-list standard NAT_ACL_{{ loop.index }}
+ permit {{ rule.source }}
+ip nat inside source list NAT_ACL_{{ loop.index }} interface {{ nat.outside }} overload
+{% elif rule.action == 'static' %}
+ip nat inside source static {{ rule.source }} {{ rule.destination }}
+{% elif rule.action == 'dynamic' %}
+ip access-list standard NAT_ACL_{{ loop.index }}
+ permit {{ rule.source }}
+ip nat pool NAT_POOL_{{ loop.index }} {{ rule.pool_start }} {{ rule.pool_end }} netmask {{ rule.netmask }}
+ip nat inside source list NAT_ACL_{{ loop.index }} pool NAT_POOL_{{ loop.index }}
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+{% endif %}
+!
+! ============================================
+! VPN CONFIGURATION
+! ============================================
+!
+{% if security and security.vpn %}
+! IPsec VPN Configuration
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ hash sha256
+ group {{ security.vpn.dh_group | default(19) }}
+ lifetime 28800
+!
+{% if security.vpn.peers %}
+{% for peer in security.vpn.peers %}
+crypto isakmp key {{ peer.psk | default('<PSK>') }} address {{ peer.peer_ip }}
+!
+{% endfor %}
+{% endif %}
+!
+crypto ipsec transform-set AES256-SHA256 esp-aes 256 esp-sha256-hmac
+ mode tunnel
+!
+{% if security.vpn.peers %}
+{% for peer in security.vpn.peers %}
+crypto map VPN-MAP {{ loop.index * 10 }} ipsec-isakmp
+ set peer {{ peer.peer_ip }}
+ set transform-set AES256-SHA256
+ set pfs group{{ security.vpn.dh_group | default(19) }}
+{% if peer.local_subnet and peer.remote_subnet %}
+ match address VPN_ACL_{{ loop.index }}
+!
+ip access-list extended VPN_ACL_{{ loop.index }}
+ permit ip {{ peer.local_subnet }} {{ peer.remote_subnet }}
+!
+{% endif %}
+{% endfor %}
+{% endif %}
+!
+{% endif %}
+!
+! ============================================
+! QoS CONFIGURATION
+! ============================================
+!
+{% if qos and qos.enabled and qos.classes %}
+! Quality of Service Configuration
+{% for class_cfg in qos.classes %}
+class-map match-any {{ class_cfg.name }}
+{% if class_cfg.dscp %}
+ match {{ class_cfg.dscp }}
+{% elif class_cfg.match %}
+ match {{ class_cfg.match }}
+{% endif %}
+!
+{% endfor %}
+!
+policy-map {{ qos.policy_name | default('QOS-POLICY') }}
+{% for class_cfg in qos.classes %}
+ class {{ class_cfg.name }}
+{% if class_cfg.priority %}
+  priority {{ class_cfg.priority }}
+{% endif %}
+{% if class_cfg.bandwidth %}
+  bandwidth {{ class_cfg.bandwidth }}
+{% endif %}
+{% if class_cfg.shape %}
+  shape average {{ class_cfg.shape }}
+{% endif %}
+{% if class_cfg.police %}
+  police {{ class_cfg.police }}
+{% endif %}
+{% endfor %}
+ class class-default
+  fair-queue
+  random-detect
+!
+{% endif %}
+!
+! ============================================
+! ACCESS CONTROL LISTS
+! ============================================
+!
+{% if security and security.acl %}
+{% for acl in security.acl %}
+{% if acl.type == 'standard' %}
+ip access-list standard {{ acl.name }}
+{% elif acl.type == 'extended' %}
+ip access-list extended {{ acl.name }}
+{% elif acl.type == 'ipv6' %}
+ipv6 access-list {{ acl.name }}
+{% endif %}
+{% if acl.entries %}
+{% for entry in acl.entries %}
+ {{ entry.action }} {{ entry.protocol | default('ip') }}{% if entry.source %} {{ entry.source }}{% endif %}{% if entry.destination %} {{ entry.destination }}{% endif %}{% if entry.port %} eq {{ entry.port }}{% endif %}
+
+{% endfor %}
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+!
+! ============================================
+! ZONE-BASED FIREWALL
+! ============================================
+!
+{% if security and security.zone_fw %}
+! Zone-Based Firewall
+{% if security.zone_fw.zones %}
+{% for zone in security.zone_fw.zones %}
+zone security {{ zone }}
+!
+{% endfor %}
+{% endif %}
+!
+{% if security.zone_fw.rules %}
+{% for rule in security.zone_fw.rules %}
+class-map type inspect match-any {{ rule.class_map | default('CLASS-' + rule.source_zone + '-' + rule.destination_zone) }}
+ match protocol tcp
+ match protocol udp
+ match protocol icmp
+!
+policy-map type inspect {{ rule.source_zone }}-TO-{{ rule.destination_zone }}-POLICY
+ class type inspect {{ rule.class_map | default('CLASS-' + rule.source_zone + '-' + rule.destination_zone) }}
+  {{ rule.action }}
+ class class-default
+  drop
+!
+zone-pair security {{ rule.source_zone }}-TO-{{ rule.destination_zone }} source {{ rule.source_zone }} destination {{ rule.destination_zone }}
+ service-policy type inspect {{ rule.source_zone }}-TO-{{ rule.destination_zone }}-POLICY
+!
+{% endfor %}
+{% endif %}
+{% endif %}
+!
+! ============================================
+! DHCP SERVICES
+! ============================================
+!
+{% if services and services.dhcp %}
+{% if services.dhcp.pools %}
+{% for pool in services.dhcp.pools %}
+ip dhcp pool {{ pool.name | default('POOL-' + loop.index | string) }}
+ network {{ pool.network.split('/')[0] }} {{ pool.network.split('/')[1] if '/' in pool.network else '255.255.255.0' }}
+{% if pool.default_gateway %}
+ default-router {{ pool.default_gateway }}
+{% endif %}
+{% if pool.dns %}
+{% for dns in pool.dns %}
+ dns-server {{ dns }}
+{% endfor %}
+{% endif %}
+{% if pool.lease_time %}
+ lease {{ pool.lease_time }}
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+ip dhcp excluded-address 0.0.0.0 0.0.0.255
+{% endif %}
+!
+! ============================================
+! ADVANCED SERVICES
+! ============================================
+!
+{% if services and services.netflow %}
+! NetFlow Configuration
+ip flow-export version 9
+ip flow-export destination 10.255.1.20 9995
+ip flow-cache timeout active 1
+ip flow-cache timeout inactive 15
+!
+{% endif %}
+!
+{% if services and services.ptp %}
+! Precision Time Protocol (PTP)
+ptp mode boundary delay-req
+ptp domain 0
+!
+{% endif %}
+!
+! ============================================
+! SECURITY HARDENING
+! ============================================
+!
+! Control Plane Policing (CoPP)
+ip access-list extended CoPP-CRITICAL
+ permit tcp any any eq bgp
+ permit tcp any eq bgp any
+ permit ospf any any
+ permit pim any any
+ip access-list extended CoPP-IMPORTANT
+ permit tcp any any eq 22
+ permit tcp any any eq tacacs
+ permit udp any any eq snmp
+ permit udp any any eq ntp
+!
+class-map match-any CoPP-CRITICAL-CLASS
+ match access-group name CoPP-CRITICAL
+class-map match-any CoPP-IMPORTANT-CLASS
+ match access-group name CoPP-IMPORTANT
+!
+policy-map CoPP-POLICY
+ class CoPP-CRITICAL-CLASS
+  police 8000000 conform-action transmit exceed-action transmit
+ class CoPP-IMPORTANT-CLASS
+  police 800000 conform-action transmit exceed-action drop
+ class class-default
+  police 100000 conform-action transmit exceed-action drop
+!
+control-plane
+ service-policy input CoPP-POLICY
+!
+! SSH Hardening
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+crypto key generate rsa modulus 2048
+!
+! VTY Lines Security
+line vty 0 4
+ exec-timeout 10 0
+ transport input ssh
+ transport output ssh
+ logging synchronous
+line vty 5 15
+ exec-timeout 10 0
+ transport input ssh
+ transport output ssh
+ logging synchronous
+!
+! Console Security
+line con 0
+ exec-timeout 10 0
+ logging synchronous
+!
+! Banner
+banner motd ^
+============================================
+AUTHORIZED ACCESS ONLY
+All activities are monitored and logged
+Unauthorized access will be prosecuted
+============================================
+^
+!
+! ============================================
+! END OF CONFIGURATION
+! ============================================
+end

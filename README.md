@@ -1,19 +1,22 @@
 # Cisco Configuration Generator
 
-**Enterprise-grade, offline-first Flask web application** for generating Cisco device configurations (IOS, NX-OS, ASA, IOS-XR).
+**Enterprise-grade, CCIE-level Flask web application** for generating Cisco device configurations supporting **ALL protocols** (IOS, NX-OS, ASA, IOS-XR).
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)](https://flask.palletsprojects.com/)
+[![CCIE](https://img.shields.io/badge/CCIE-Ready-red.svg)](docs/CCIE_GUIDE.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 🌟 Features
 
 ### Core Capabilities
-- ✅ **Multi-Platform Support**: IOS, NX-OS, ASA, IOS-XR
+- ✅ **Multi-Platform Support**: IOS, IOS-XE, NX-OS, IOS-XR, ASA, FTD
+- ✅ **CCIE-Level Configuration**: Complete protocol coverage
 - ✅ **Multiple Output Formats**: CLI, JSON, YAML
 - ✅ **Offline-First Architecture**: Zero external dependencies
 - ✅ **REST API**: Full RESTful API with versioning
 - ✅ **Web Interface**: Modern Bootstrap 5 UI
+- ✅ **Validation & Explanation**: Auto-validation with technical explanations
 
 ### Enterprise Features
 - 🔐 **JWT Authentication**: Secure token-based auth
@@ -23,14 +26,34 @@
 - 🔒 **Security Hardening**: CSRF protection, secure headers, rate limiting
 - 📝 **Schema Validation**: Marshmallow schemas for API requests
 
-### Configuration Options
-- **Interfaces**: IP addressing, descriptions, enable/disable
-- **VLANs**: Creation and management
-- **Routing**: Static routes, OSPF
-- **Services**: NTP, DNS, Syslog
-- **AAA**: TACACS+, RADIUS, local users
-- **SNMP**: Community strings, location, contact
-- **Banners**: MOTD, login
+### CCIE Protocol Coverage
+
+#### Layer 2 (Switch)
+- VLANs, STP/RSTP/MST, EtherChannel (LACP/PAgP), VTP, QinQ, PVLAN
+- Port Security, DHCP Snooping, DAI, IGMP Snooping, StackWise/vPC
+
+#### Layer 3 (Router/L3 Switch)
+- Static, OSPF (v2/v3), EIGRP, IS-IS, RIP, BGP
+- HSRP, VRRP, GLBP, PBR, VRF-Lite, MPLS, Segment Routing, BFD
+
+#### Multicast
+- IGMPv1-3, PIM-SM/DM/SSM/BIDIR, MSDP, Auto-RP, Anycast-RP
+
+#### VPN
+- IPsec, GRE, DMVPN, FlexVPN, GETVPN, L2TP, SSL VPN (AnyConnect)
+
+#### Security
+- ACL, Zone-Based Firewall, CBAC, ASA Policies, IPS/IDS
+- TrustSec, 802.1X, Port Security, DAI, uRPF
+
+#### QoS
+- LLQ, CBWFQ, Shaping, Policing, WRED, AutoQoS, NBAR2
+
+#### Services
+- NAT/PAT, DHCP, DNS, SNMP, Syslog, NTP, PTP, NetFlow/IPFIX, EEM
+
+#### Infrastructure
+- NSF/SSO, ISSU, CoPP, Smart Licensing, NETCONF/RESTCONF
 
 ## 📁 Architecture
 
@@ -240,10 +263,13 @@ pytest tests/test_api.py::TestAPIGenerate::test_generate_config_success
 ## 📊 API Endpoints
 
 ### Configuration Generation
-- `POST /api/v1/generate` - Generate configuration
+- `POST /api/v1/generate` - Generate basic configuration
+- `POST /api/v1/generate-ccie` - **Generate CCIE-level configuration** ⭐
 - `POST /api/v1/validate` - Validate configuration data
 - `GET /api/v1/platforms` - List supported platforms
 - `GET /api/v1/schema` - Get API schema
+- `GET /api/v1/ccie-schema` - Get CCIE API schema
+- `GET /api/v1/ccie-examples` - Get CCIE configuration examples
 
 ### Authentication
 - `POST /auth/register` - Register new user
@@ -302,6 +328,7 @@ HISTORY_RETENTION_DAYS=90
 
 ## 📚 Documentation
 
+- [CCIE Configuration Guide](docs/CCIE_GUIDE.md) - **Complete protocol coverage** ⭐
 - [API Specification](docs/API_SPEC.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
