@@ -1,209 +1,520 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cisco Configuration Generator</title>
+    <title>Cisco Configuration Generator - Professional Edition</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <!-- Monaco Editor -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+            --dark-bg: #1e1e1e;
+            --dark-card: #252526;
+            --dark-text: #d4d4d4;
+            --light-bg: #ffffff;
+            --light-card: #f8f9fa;
+            --light-text: #212529;
+        }
+
+        [data-theme="dark"] {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .navbar {
+            background-color: #1a1a1a !important;
+        }
+
+        [data-theme="dark"] .card {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+            border-color: #3e3e42;
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: #3c3c3c;
+            border-color: #555;
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .nav-tabs .nav-link {
+            color: #888;
+        }
+
+        [data-theme="dark"] .nav-tabs .nav-link.active {
+            background-color: var(--dark-card);
+            border-color: #3e3e42;
+            color: var(--dark-text);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .feature-card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-tabs .nav-link {
+            border-radius: 0.5rem 0.5rem 0 0;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: white;
+            border-bottom-color: white;
+        }
+
+        #monaco-editor {
+            height: 600px;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+
+        [data-theme="dark"] #monaco-editor {
+            border-color: #3e3e42;
+        }
+
+        .template-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 15px rgba(13, 110, 253, 0.3);
+        }
+
+        .wizard-step {
+            display: none;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .step-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 0.5rem;
+        }
+
+        .step-item::before {
+            content: '';
+            position: absolute;
+            top: 1.5rem;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #dee2e6;
+            z-index: -1;
+        }
+
+        .step-item:first-child::before {
+            left: 50%;
+            width: 50%;
+        }
+
+        .step-item:last-child::before {
+            width: 50%;
+        }
+
+        .step-number {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-item.completed .step-number {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .step-item.active .step-number {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .theme-toggle {
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+        }
+
+        .quick-action-btn {
+            font-size: 1.1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .platform-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .badge-ios { background: #0d6efd; color: white; }
+        .badge-nxos { background: #198754; color: white; }
+        .badge-asa { background: #dc3545; color: white; }
+        .badge-iosxr { background: #fd7e14; color: white; }
+    </style>
 </head>
 <body>
+    <!-- Navigation -->
     <nav class="navbar navbar-dark bg-primary">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-router" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-router-fill" viewBox="0 0 16 16" style="margin-right: 10px;">
                     <path d="M5.525 3.025a3.5 3.5 0 0 1 4.95 0 .5.5 0 1 0 .707-.707 4.5 4.5 0 0 0-6.364 0 .5.5 0 0 0 .707.707"/>
-                    <path d="M6.94 4.44a1.5 1.5 0 0 1 2.12 0 .5.5 0 0 0 .708-.708 2.5 2.5 0 0 0-3.536 0 .5.5 0 0 0 .707.707ZM2.5 11a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m4.5-.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0m2.5.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m1.5-.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0m2 0a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0"/>
-                    <path d="M2 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-3V3zm-4 0v9H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+                    <path d="M6.94 4.44a1.5 1.5 0 0 1 2.12 0 .5.5 0 0 0 .708-.708 2.5 2.5 0 0 0-3.536 0 .5.5 0 0 0 .707.707M2 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm.5 8a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m2 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1M7 10a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m2-.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0"/>
                 </svg>
-                Cisco Configuration Generator
+                Cisco Configuration Generator Pro
             </span>
-            <div class="d-flex">
-                <button class="btn btn-outline-light me-2" id="loginBtn">Login</button>
-                <button class="btn btn-outline-light" id="historyBtn">History</button>
+            <div class="d-flex align-items-center">
+                <span class="theme-toggle me-3" onclick="toggleTheme()" title="Toggle Dark Mode">
+                    🌙
+                </span>
+                <button class="btn btn-outline-light me-2" id="loginBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
+                    </svg>
+                    Login
+                </button>
+                <button class="btn btn-outline-light" id="historyBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/>
+                        <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/>
+                        <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/>
+                    </svg>
+                    History
+                </button>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-md-12">
-                <div class="alert alert-info" role="alert">
-                    <strong>Offline Mode:</strong> This application operates entirely offline with no external dependencies.
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold mb-3">Professional Cisco Configuration Generator</h1>
+            <p class="lead mb-4">Generate enterprise-grade CCIE-level configurations with ease</p>
+            <div class="d-flex justify-content-center gap-3">
+                <span class="platform-badge badge-ios">IOS / IOS-XE</span>
+                <span class="platform-badge badge-nxos">NX-OS</span>
+                <span class="platform-badge badge-asa">ASA</span>
+                <span class="platform-badge badge-iosxr">IOS-XR</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mb-5">
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card feature-card" onclick="showTab('custom')">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">⚙️</div>
+                        <h5 class="card-title">Custom Build</h5>
+                        <p class="card-text text-muted">Build from scratch</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card feature-card" onclick="showTab('templates')">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">📋</div>
+                        <h5 class="card-title">Templates</h5>
+                        <p class="card-text text-muted">Pre-configured setups</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card feature-card" onclick="showTab('wizard')">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">🧙</div>
+                        <h5 class="card-title">Wizard</h5>
+                        <p class="card-text text-muted">Step-by-step guide</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card feature-card" onclick="showTab('import')">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">📁</div>
+                        <h5 class="card-title">Import</h5>
+                        <p class="card-text text-muted">Modify existing config</p>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Main Content -->
         <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Configuration Generator</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="configForm">
-                            <!-- Platform Selection -->
-                            <div class="mb-3">
-                                <label for="platform" class="form-label">Platform *</label>
-                                <select class="form-select" id="platform" name="platform" required>
-                                    {% for p in platforms %}
-                                    <option value="{{ p }}">{{ p.upper() }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+            <div class="col-12">
+                <!-- Custom Build Tab -->
+                <div id="customTab" class="content-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Configuration Builder</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="configForm">
+                                        <ul class="nav nav-tabs mb-3" role="tablist">
+                                            <li class="nav-item">
+                                                <a class="nav-link active" data-bs-toggle="tab" href="#basicTab">Basic</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-bs-toggle="tab" href="#interfacesTab">Interfaces</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-bs-toggle="tab" href="#routingTab">Routing</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-bs-toggle="tab" href="#servicesTab">Services</a>
+                                            </li>
+                                        </ul>
 
-                            <!-- Hostname -->
-                            <div class="mb-3">
-                                <label for="hostname" class="form-label">Hostname *</label>
-                                <input type="text" class="form-control" id="hostname" name="hostname"
-                                       placeholder="router01" required>
-                            </div>
+                                        <div class="tab-content">
+                                            <!-- Basic Tab -->
+                                            <div class="tab-pane fade show active" id="basicTab">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Platform *</label>
+                                                    <select class="form-select" id="platform" required>
+                                                        {% for p in platforms %}
+                                                        <option value="{{ p }}">{{ p.upper() }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Hostname *</label>
+                                                    <input type="text" class="form-control" id="hostname" placeholder="router01" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Domain Name</label>
+                                                    <input type="text" class="form-control" id="domain_name" placeholder="example.com">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Enable Secret</label>
+                                                    <input type="password" class="form-control" id="enable_secret">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Output Format</label>
+                                                    <select class="form-select" id="output_format">
+                                                        <option value="cli">CLI</option>
+                                                        <option value="json">JSON</option>
+                                                        <option value="yaml">YAML</option>
+                                                    </select>
+                                                </div>
+                                            </div>
 
-                            <!-- Domain Name -->
-                            <div class="mb-3">
-                                <label for="domain_name" class="form-label">Domain Name</label>
-                                <input type="text" class="form-control" id="domain_name" name="domain_name"
-                                       placeholder="example.com">
-                            </div>
+                                            <!-- Interfaces Tab -->
+                                            <div class="tab-pane fade" id="interfacesTab">
+                                                <div id="interfacesList"></div>
+                                                <button type="button" class="btn btn-secondary btn-sm" onclick="addInterface()">
+                                                    + Add Interface
+                                                </button>
+                                            </div>
 
-                            <!-- Enable Secret -->
-                            <div class="mb-3">
-                                <label for="enable_secret" class="form-label">Enable Secret</label>
-                                <input type="password" class="form-control" id="enable_secret" name="enable_secret">
-                            </div>
+                                            <!-- Routing Tab -->
+                                            <div class="tab-pane fade" id="routingTab">
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="ospfEnabled">
+                                                    <label class="form-check-label" for="ospfEnabled">Enable OSPF</label>
+                                                </div>
+                                                <div id="ospfConfig" style="display: none;">
+                                                    <div class="mb-2">
+                                                        <input type="number" class="form-control" id="ospfProcessId" placeholder="Process ID (1)">
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <input type="text" class="form-control" id="ospfRouterId" placeholder="Router ID (1.1.1.1)">
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                            <!-- Output Format -->
-                            <div class="mb-3">
-                                <label for="output_format" class="form-label">Output Format</label>
-                                <select class="form-select" id="output_format" name="output_format">
-                                    {% for fmt in formats %}
-                                    <option value="{{ fmt }}">{{ fmt.upper() }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                                            <!-- Services Tab -->
+                                            <div class="tab-pane fade" id="servicesTab">
+                                                <div class="mb-3">
+                                                    <label class="form-label">NTP Servers</label>
+                                                    <input type="text" class="form-control" id="ntpServers" placeholder="pool.ntp.org, time.google.com">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">DNS Servers</label>
+                                                    <input type="text" class="form-control" id="dnsServers" placeholder="8.8.8.8, 8.8.4.4">
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            <!-- Advanced Options -->
-                            <div class="accordion mb-3" id="advancedAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#interfacesCollapse">
-                                            Interfaces
-                                        </button>
-                                    </h2>
-                                    <div id="interfacesCollapse" class="accordion-collapse collapse"
-                                         data-bs-parent="#advancedAccordion">
-                                        <div class="accordion-body">
-                                            <div id="interfaceList"></div>
-                                            <button type="button" class="btn btn-sm btn-secondary"
-                                                    onclick="addInterface()">
-                                                Add Interface
+                                        <div class="d-grid gap-2 mt-3">
+                                            <button type="submit" class="btn btn-primary btn-lg">
+                                                🚀 Generate Configuration
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#vlansCollapse">
-                                            VLANs
-                                        </button>
-                                    </h2>
-                                    <div id="vlansCollapse" class="accordion-collapse collapse"
-                                         data-bs-parent="#advancedAccordion">
-                                        <div class="accordion-body">
-                                            <textarea class="form-control" id="vlansJson" rows="4"
-                                                      placeholder='[{"id": 10, "name": "DATA"}, {"id": 20, "name": "VOICE"}]'></textarea>
-                                            <small class="text-muted">Enter VLANs as JSON array</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#routingCollapse">
-                                            Routing
-                                        </button>
-                                    </h2>
-                                    <div id="routingCollapse" class="accordion-collapse collapse"
-                                         data-bs-parent="#advancedAccordion">
-                                        <div class="accordion-body">
-                                            <label class="form-label">Static Routes (JSON)</label>
-                                            <textarea class="form-control mb-2" id="staticRoutesJson" rows="3"
-                                                      placeholder='[{"network": "0.0.0.0/0", "next_hop": "192.168.1.254"}]'></textarea>
-
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" id="ospfEnabled">
-                                                <label class="form-check-label" for="ospfEnabled">
-                                                    Enable OSPF
-                                                </label>
-                                            </div>
-                                            <div id="ospfConfig" style="display: none;">
-                                                <input type="number" class="form-control mb-2" id="ospfProcessId"
-                                                       placeholder="Process ID (e.g., 1)">
-                                                <input type="text" class="form-control" id="ospfRouterId"
-                                                       placeholder="Router ID (e.g., 1.1.1.1)">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#servicesCollapse">
-                                            Services
-                                        </button>
-                                    </h2>
-                                    <div id="servicesCollapse" class="accordion-collapse collapse"
-                                         data-bs-parent="#advancedAccordion">
-                                        <div class="accordion-body">
-                                            <label class="form-label">NTP Servers</label>
-                                            <input type="text" class="form-control mb-2" id="ntpServers"
-                                                   placeholder="pool.ntp.org, time.google.com">
-
-                                            <label class="form-label">DNS Servers</label>
-                                            <input type="text" class="form-control mb-2" id="dnsServers"
-                                                   placeholder="8.8.8.8, 8.8.4.4">
-
-                                            <label class="form-label">Syslog Servers</label>
-                                            <input type="text" class="form-control" id="syslogServers"
-                                                   placeholder="192.168.1.100">
-                                        </div>
-                                    </div>
+                                    </form>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary btn-lg">Generate Configuration</button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="loadExample()">
-                                    Load Example
-                                </button>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Generated Configuration</h5>
+                                    <div>
+                                        <button class="btn btn-sm btn-light me-1" onclick="copyConfig()" title="Copy">
+                                            📋
+                                        </button>
+                                        <button class="btn btn-sm btn-light" onclick="downloadConfig()" title="Download">
+                                            💾
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="loadingSpinner" style="display: none;" class="text-center p-5">
+                                        <div class="spinner-border text-primary"></div>
+                                        <p class="mt-2">Generating...</p>
+                                    </div>
+                                    <div id="errorAlert" class="alert alert-danger m-3" style="display: none;"></div>
+                                    <div id="monaco-editor"></div>
+                                </div>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Generated Configuration</h5>
-                        <button class="btn btn-sm btn-light" id="downloadBtn" style="display: none;">
-                            Download
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div id="loadingSpinner" style="display: none;" class="text-center p-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Generating...</span>
-                            </div>
-                            <p class="mt-2">Generating configuration...</p>
+                <!-- Templates Tab -->
+                <div id="templatesTab" class="content-tab" style="display: none;">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">CCIE-Level Templates</h5>
                         </div>
-                        <div id="errorAlert" class="alert alert-danger" style="display: none;" role="alert"></div>
-                        <pre id="configOutput" class="bg-dark text-light p-3" style="max-height: 600px; overflow-y: auto;"></pre>
+                        <div class="card-body">
+                            <div class="row" id="templatesList">
+                                <!-- Templates will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wizard Tab -->
+                <div id="wizardTab" class="content-tab" style="display: none;">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Configuration Wizard</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Step Indicator -->
+                            <div class="step-indicator">
+                                <div class="step-item active" data-step="1">
+                                    <div class="step-number">1</div>
+                                    <div class="step-label">Device Info</div>
+                                </div>
+                                <div class="step-item" data-step="2">
+                                    <div class="step-number">2</div>
+                                    <div class="step-label">Interfaces</div>
+                                </div>
+                                <div class="step-item" data-step="3">
+                                    <div class="step-number">3</div>
+                                    <div class="step-label">Routing</div>
+                                </div>
+                                <div class="step-item" data-step="4">
+                                    <div class="step-number">4</div>
+                                    <div class="step-label">Services</div>
+                                </div>
+                                <div class="step-item" data-step="5">
+                                    <div class="step-number">5</div>
+                                    <div class="step-label">Review</div>
+                                </div>
+                            </div>
+
+                            <div id="wizardSteps">
+                                <!-- Wizard steps content will be here -->
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button class="btn btn-secondary" onclick="prevWizardStep()" id="wizardPrev" disabled>
+                                    ← Previous
+                                </button>
+                                <button class="btn btn-primary" onclick="nextWizardStep()" id="wizardNext">
+                                    Next →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Import Tab -->
+                <div id="importTab" class="content-tab" style="display: none;">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Import Configuration</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Paste your existing Cisco configuration here:</label>
+                                <textarea class="form-control" id="importConfigText" rows="15" placeholder="hostname router01&#10;!&#10;interface GigabitEthernet0/0&#10; ip address 192.168.1.1 255.255.255.0&#10;!"></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="parseConfig()">
+                                🔍 Parse & Load Configuration
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -221,11 +532,11 @@
                 <div class="modal-body">
                     <form id="loginForm">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
+                            <label class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" required>
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
+                            <label class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Login</button>
@@ -237,6 +548,8 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
