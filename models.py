@@ -160,3 +160,54 @@ class APIKey(db.Model):
 
     def __repr__(self):
         return f'<APIKey {self.name}>'
+
+
+class AuditLog(db.Model):
+    """Audit log model for security and compliance tracking."""
+    __tablename__ = 'audit_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    action = db.Column(db.String(50), nullable=False, index=True)  # login, logout, create, update, delete, etc.
+    resource_type = db.Column(db.String(50))  # user, config, api_key, etc.
+    resource_id = db.Column(db.Integer)
+    details = db.Column(db.Text)  # JSON string with additional details
+    ip_address = db.Column(db.String(45))  # IPv4 or IPv6
+    user_agent = db.Column(db.String(255))
+    status = db.Column(db.String(20))  # success, failure, error
+    severity = db.Column(db.String(20), default='info')  # info, warning, error, critical
+
+    # Relationships
+    user = db.relationship('User', backref=db.backref('audit_logs', lazy='dynamic'))
+
+    def get_details(self):
+        """Parse JSON details."""
+        try:
+            return json.loads(self.details) if self.details else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_details(self, data):
+        """Set details as JSON string."""
+        self.details = json.dumps(data) if data else None
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'user_id': self.user_id,
+            'username': self.user.username if self.user else 'anonymous',
+            'action': self.action,
+            'resource_type': self.resource_type,
+            'resource_id': self.resource_id,
+            'details': self.get_details(),
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'status': self.status,
+            'severity': self.severity
+        }
+
+    def __repr__(self):
+        return f'<AuditLog {self.id} - {self.action} - {self.status}>'

@@ -13,6 +13,8 @@ from models import db
 from utils.validators import ValidationError
 from utils.auth import AuthError
 from utils.renderer import RenderError
+from utils.security import SecurityHeaders
+from utils.cache import cache_manager
 
 
 # Load environment variables
@@ -20,6 +22,9 @@ load_dotenv()
 
 # Initialize Flask-Migrate
 migrate = Migrate()
+
+# Initialize Security Headers
+security_headers = SecurityHeaders()
 
 
 def create_app(config_name=None):
@@ -42,17 +47,35 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    security_headers.init_app(app)
+    cache_manager.init_app(app)
 
     # Register blueprints
     from extensions.api import api_bp
     from extensions.history import history_bp
     from extensions.auth_routes import auth_bp
     from extensions.ccie_api import ccie_api_bp
+    from extensions.swagger import swagger_bp
 
     app.register_blueprint(api_bp, url_prefix='/api/v1')
     app.register_blueprint(ccie_api_bp, url_prefix='/api/v1')
     app.register_blueprint(history_bp, url_prefix='/history')
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(swagger_bp, url_prefix='/api')
+
+    # Register audit blueprint
+    from extensions.audit import audit_bp
+    app.register_blueprint(audit_bp, url_prefix='/audit')
+
+    # Register bulk operations blueprint
+    from extensions.bulk import bulk_bp
+    app.register_blueprint(bulk_bp, url_prefix='/bulk')
+
+    # Register metrics blueprint if enabled
+    if app.config.get('METRICS_ENABLED', True):
+        from extensions.metrics import metrics_bp, MetricsMiddleware
+        app.register_blueprint(metrics_bp)
+        MetricsMiddleware(app)
 
     # Register error handlers
     register_error_handlers(app)

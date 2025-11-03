@@ -59,6 +59,14 @@ class Config:
     TEMPLATE_DIR = BASE_DIR / 'templates'
     CONFIG_TEMPLATE_DIR = BASE_DIR / 'config_templates'
 
+    # Cache Configuration
+    CACHE_TYPE = os.environ.get('CACHE_TYPE', 'redis')
+    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL', 'redis://localhost:6379/0')
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_DEFAULT_TIMEOUT', 300))
+
+    # Metrics Configuration
+    METRICS_ENABLED = os.environ.get('METRICS_ENABLED', 'True') == 'True'
+
     @staticmethod
     def init_app(app):
         """Initialize application with configuration."""

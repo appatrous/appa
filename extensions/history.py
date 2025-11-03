@@ -265,15 +265,18 @@ def cleanup_old_history():
 @auth_required
 def compare_configs():
     """
-    Compare two configuration history entries.
+    Compare two configuration history entries with detailed diff.
 
     Request body:
         - config1_id: First configuration ID
         - config2_id: Second configuration ID
+        - diff_type: Type of diff (unified, html, structured) - default: structured
 
     Returns:
-        JSON response with both configurations
+        JSON response with detailed comparison
     """
+    from utils.diff import generate_change_summary, ConfigDiff
+
     data = request.get_json()
 
     if not data or 'config1_id' not in data or 'config2_id' not in data:
@@ -300,8 +303,42 @@ def compare_configs():
                 'message': 'You do not have permission to compare these entries'
             }), 403
 
+    # Get diff type
+    diff_type = data.get('diff_type', 'structured')
+
+    # Generate comparison
+    filename1 = f"{config1.hostname} ({config1.platform})"
+    filename2 = f"{config2.hostname} ({config2.platform})"
+
+    if diff_type == 'html':
+        diff_content = ConfigDiff.html_diff(
+            config1.generated_config,
+            config2.generated_config,
+            filename1,
+            filename2
+        )
+        return diff_content, 200, {'Content-Type': 'text/html'}
+
+    summary = generate_change_summary(
+        config1.generated_config,
+        config2.generated_config,
+        filename1,
+        filename2
+    )
+
     return jsonify({
         'success': True,
-        'config1': config1.to_dict(include_config=True),
-        'config2': config2.to_dict(include_config=True)
+        'config1': {
+            'id': config1.id,
+            'hostname': config1.hostname,
+            'platform': config1.platform,
+            'created_at': config1.created_at.isoformat() if config1.created_at else None
+        },
+        'config2': {
+            'id': config2.id,
+            'hostname': config2.hostname,
+            'platform': config2.platform,
+            'created_at': config2.created_at.isoformat() if config2.created_at else None
+        },
+        'comparison': summary
     }), 200

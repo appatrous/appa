@@ -1,0 +1,36 @@
+Generic single-database configuration for Flask applications using Alembic.
+
+## Usage
+
+To create a new migration:
+```bash
+flask db migrate -m "Description of changes"
+```
+
+To apply migrations:
+```bash
+flask db upgrade
+```
+
+To revert migrations:
+```bash
+flask db downgrade
+```
+
+To see current migration version:
+```bash
+flask db current
+```
+
+To see migration history:
+```bash
+flask db history
+```
+
+## Initial Setup
+
+The migrations directory has been initialized. To create the initial migration:
+
+1. Ensure your models are defined in models.py
+2. Run: `flask db migrate -m "Initial migration"`
+3. Run: `flask db upgrade`
